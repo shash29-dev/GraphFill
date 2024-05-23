@@ -3,7 +3,7 @@
 GraphFill: Deep Image Inpainting using Graphs
 
 
-Download Model trained on places dataset from [Here]() and place in `./saved_models/c2f_iter/places256/last.ckpt`
+Download Model trained on places dataset from [Here](https://drive.google.com/file/d/1riHa9AB7Ozin3yR-_PH-96zaUttg_J-9/view?usp=sharing) and place in `./saved_models/c2f_iter/places256/last.ckpt`
 
 Run `python data_gen_pickle.py config=places_256.yaml` first to generate pickles for faster data-loading. (Optional)
 
