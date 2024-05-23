@@ -1,0 +1,42 @@
+# @package model
+image_to_discriminator: 'predicted_image'  #inpainted
+
+concat_mask: True  # will set input_nc = 4 automatically
+
+discriminator:
+  kind: pix2pixhd_nlayer
+  input_nc: 3
+  ndf: 64
+  n_layers: 4
+
+generator:
+  kind: c2f_ffc
+  input_nc: 3
+  coarse:
+    kind: gcn   # gcn_iter, gcn
+    indim: 3  # managed inherently as per concat_mask
+    depth: 6  # 6+1+1, 2*(depth//2)
+    gated: True
+  refine:
+    kind: ffc_resnet
+    input_nc: 4  # managed inherently as per concat_mask
+    output_nc: 3
+    ngf: 64
+    n_downsampling: 2
+    n_blocks: 3
+    add_out_act: sigmoid
+
+    init_conv_kwargs:
+      ratio_gin: 0
+      ratio_gout: 0
+      enable_lfu: False
+
+    downsample_conv_kwargs:
+      ratio_gin: ${model.generator.refine.init_conv_kwargs.ratio_gout}
+      ratio_gout: ${model.generator.refine.downsample_conv_kwargs.ratio_gin}
+      enable_lfu: False
+
+    resnet_conv_kwargs:
+      ratio_gin: 0.75
+      ratio_gout: ${model.generator.refine.resnet_conv_kwargs.ratio_gin}
+      enable_lfu: False

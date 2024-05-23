@@ -1,0 +1,11 @@
+# @package model
+image_to_discriminator: 'predicted_image'  #inpainted
+concat_mask: False
+discriminator:
+  kind: pix2pixhd_nlayer
+  input_nc: 3
+  ndf: 64
+  n_layers: 4
+
+generator: 
+  kind: tmp

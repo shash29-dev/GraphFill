@@ -1,0 +1,93 @@
+run_title: Inpainting
+kind: c2f_iter    # def_pix2pixhd_b9_d4, c2f, c2f_iter, c2f_ffc_iter
+
+util_args:
+  predict_only: False
+  visualize_each_iters: 50
+  visualize_each_iters_val: 50
+
+defaults:
+  - model: c2f_iter  # pix2pixhd_b9_d4, c2f, c2f_ffc
+  - data: places_256
+  - spix_gen: pyramid256   # nogen, pyramid
+
+optimizers:
+  generator:
+    kind: adam
+    lr: 0.0001
+  discriminator:
+    kind: adam
+    lr: 0.0001
+  coarse_model:
+    kind: adam
+    lr: 0.0001
+
+losses:
+  lpips:
+    weight: 10
+  l2:
+    weight_missing: 50
+    weight_known: 10
+  l1:
+    weight_missing: 50
+    weight_known: 10
+  perceptual:
+    weight: 0
+  adversarial:
+    kind: r1
+    weight: 10
+    gp_coef: 0.001
+    mask_as_fake_target: true
+    allow_scale_mask: true
+  feature_matching:
+    weight: 50
+  resnet_pl:
+    weight: 100
+    weights_path: ./models
+  spix:
+    unn: 50
+    knn: 10
+
+visualizer:
+  kind: c2f  # cnn_gan, coarse
+  outdir: ResultDump/${kind}/${data.kind}
+  max_items_in_batch: 5
+  key_order:
+    - image
+    - predicted_image
+    - inpainted
+
+evaluator:
+  kind: default
+  inpainted_key: inpainted  # if you want to evaluate before blending with original image by mask, set predicted_image
+  integral_kind: ssim_fid100_f1
+
+tb_dir: ./logs/TB/${kind}/${data.kind}
+save_model_dir: ./saved_models/${kind}/${data.kind}
+model_load: ./saved_models/${kind}/${data.kind}/last.ckpt
+
+trainer:
+  kwargs:
+    accelerator: gpu
+    devices: [0]
+    max_epochs: 2
+    log_every_n_steps: 10
+    num_sanity_val_steps: 0
+    check_val_every_n_epoch: 1
+    precision: 32
+    # val_check_interval: 50000
+    # gradient_clip_val: 1
+
+  checkpoint_kwargs:
+    verbose: True
+    save_last: True
+    every_n_train_steps: 500
+    save_top_k: 5
+    monitor: val_ssim_fid100_f1_total_mean
+    mode: max
+
+hydra:  
+  run:  
+    dir: ./logs/hydra/${kind}/${data.kind}/${now:%Y-%m-%d}/${now:%H-%M-%S}
+
+

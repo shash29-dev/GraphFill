@@ -1,0 +1,5 @@
+# @package spix_gen
+generate: True
+segments: [ 100, 800,1500]
+# segments_mask: [50,100,200]  # 256x256
+segments_mask: [50,400,1000]    # 512x512

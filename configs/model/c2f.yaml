@@ -1,0 +1,31 @@
+# @package model
+image_to_discriminator: 'predicted_image'  #inpainted
+
+concat_mask: True  # will set input_nc = 4 automatically
+
+discriminator:
+  kind: pix2pixhd_nlayer
+  input_nc: 3
+  ndf: 64
+  n_layers: 4
+
+generator:
+  kind: c2f
+  coarse:
+    kind: gcn   # gcn_iter, gcn
+    indim: 3  # managed inherently as per concat_mask
+    depth: 6  # 6+1+1, 2*(depth//2)
+    gated: True
+  refine:
+      kind: pix2pixhd_multidilated
+      input_nc: ${model.generator.coarse.indim}  
+      output_nc: 3
+      ngf: 64
+      n_downsampling: 2
+      n_blocks: 3
+      conv_kind: default
+      add_out_act: sigmoid
+      multidilation_kwargs:
+        comb_mode: cat_in
+        dilation_num: 2
+
