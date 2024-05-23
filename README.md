@@ -11,3 +11,5 @@ Run `./run.sh` or `python run_validation.py config=places_256.yaml` to obtain re
 
 
 #TODO: More Details to be updated.
+
+Note: Present shared model contains weights discriminator, pre-trained model weights for perceptual loss calculation, etc. which are irrelevant in evaluation setting. 
