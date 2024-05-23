@@ -9,6 +9,8 @@ Run `python data_gen_pickle.py config=places_256.yaml` first to generate pickles
 
 Run `./run.sh` or `python run_validation.py config=places_256.yaml` to obtain results for the shared data in `val_results` folder.
 
+Run `python train.py config=places_256.yaml` for training GraphFill.
+
 
 #TODO: More Details to be updated.
 
