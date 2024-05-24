@@ -38,3 +38,14 @@ torch_sparse==0.6.17
 ```
 
 Code in this repository is highly inspred from: LaMa: Resolution-robust Large Mask Inpainting with Fourier Convolutions. Please follow there Instruction to setup `./models` folder, make random masks of sizes `medium,thin,thick`.
+
+# Bib
+```
+@inproceedings{verma2024graphfill,
+  title={GraphFill: Deep Image Inpainting Using Graphs},
+  author={Verma, Shashikant and Sharma, Aman and Sheshadri, Roopa and Raman, Shanmuganathan},
+  booktitle={Proceedings of the IEEE/CVF Winter Conference on Applications of Computer Vision},
+  pages={4996--5006},
+  year={2024}
+}
+```
