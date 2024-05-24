@@ -1,5 +1,5 @@
 # @package data
-kind: places256
+kind: celeb256
 batch_size: 8
 val_batch_size: 8
 num_workers: 0
@@ -39,10 +39,10 @@ train:
 
 val:
   # indir: ./pickleData/places256
-  indir: ./demo_data/places/images
+  indir: ./demo_data/celeb/images
   pickle_data: False
   img_suffix: .png
-  val_save: ./val_results/places    # To save results for all data, Turn off for validating large splits
+  val_save: ./val_results/celeb   # To save results for all data, Turn off for validating large splits
   dataloader_kwargs:
     batch_size: ${data.val_batch_size}
     shuffle: False

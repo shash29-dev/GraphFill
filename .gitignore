@@ -159,6 +159,7 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 
+logs/
 models/ade20k/ade20k-resnet50dilated-ppm_deepsupsaved_models/
 saved_models/
 pickleData/

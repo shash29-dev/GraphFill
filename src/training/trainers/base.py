@@ -9,7 +9,6 @@ from src.training.modules import make_discriminator, make_generator
 from src.training.losses.adversarial import make_discrim_loss
 from src.training.visualizers import make_visualizer
 from torch import nn
-from src.training.losses.perceptual import PerceptualLoss, ResNetPL
 import pandas as pd
 from src.evaluation import make_evaluator
 import numpy as np
@@ -56,20 +55,21 @@ class BaseInpaintingModule(ptl.LightningModule):
             else:
                 self.extra_evaluators = {}
 
-        if self.cfg.losses.get("l1", {"weight_known": 0})['weight_known'] > 0:
-            self.loss_l1 = nn.L1Loss(reduction='none')
+            if self.cfg.losses.get("l1", {"weight_known": 0})['weight_known'] > 0:
+                self.loss_l1 = nn.L1Loss(reduction='none')
 
-        if self.cfg.losses.get("mse", {"weight": 0})['weight'] > 0:
-            self.loss_mse = nn.MSELoss(reduction='none')
-        
-        if self.cfg.losses.perceptual.weight > 0:
-            self.loss_pl = PerceptualLoss()
-            # set_requires_grad(self.loss_pl,False)
+            if self.cfg.losses.get("mse", {"weight": 0})['weight'] > 0:
+                self.loss_mse = nn.MSELoss(reduction='none')
+            
+            from src.training.losses.perceptual import PerceptualLoss, ResNetPL
+            if self.cfg.losses.perceptual.weight > 0:
+                self.loss_pl = PerceptualLoss()
+                # set_requires_grad(self.loss_pl,False)
 
-        if self.cfg.losses.get("resnet_pl", {"weight": 0})['weight'] > 0:
-            self.loss_lpips = lpips.LPIPS(net='vgg')
-            self.loss_resnet_pl = ResNetPL(**self.cfg.losses.resnet_pl)
-            # set_requires_grad(self.loss_resnet_pl,False)
+            if self.cfg.losses.get("resnet_pl", {"weight": 0})['weight'] > 0:
+                self.loss_lpips = lpips.LPIPS(net='vgg')
+                self.loss_resnet_pl = ResNetPL(**self.cfg.losses.resnet_pl)
+                # set_requires_grad(self.loss_resnet_pl,False)
         
 
     def train_dataloader(self): 
@@ -103,7 +103,7 @@ class BaseInpaintingModule(ptl.LightningModule):
         self.log_dict(log_info, on_step=True, on_epoch=False)
         return full_loss
 
-    def validation_step(self, batch, batch_idx, dataloader_idx):
+    def validation_step(self, batch, batch_idx, dataloader_idx=0):
         extra_val_key = None
         if dataloader_idx == 0:
             mode = 'val'
@@ -114,36 +114,39 @@ class BaseInpaintingModule(ptl.LightningModule):
         return self._do_step(batch, batch_idx, mode=mode, extra_val_key=extra_val_key)
 
     def validation_epoch_end(self, outputs):
-        outputs = [step_out for out_group in outputs for step_out in out_group]
-        averaged_logs = average_dicts(step_out['log_info'] for step_out in outputs)
-        self.log_dict({k: v.mean() for k, v in averaged_logs.items()})
+        if self.cfg.util_args.predict_only==False:
+            if len(outputs)==1:
+                outputs=[outputs]
+            outputs = [step_out for out_group in outputs for step_out in out_group]
+            averaged_logs = average_dicts(step_out['log_info'] for step_out in outputs)
+            self.log_dict({k: v.mean() for k, v in averaged_logs.items()})
 
-        pd.set_option('display.max_columns', 500)
-        pd.set_option('display.width', 1000)
+            pd.set_option('display.max_columns', 500)
+            pd.set_option('display.width', 1000)
 
-        # standard validation
-        val_evaluator_states = [s['val_evaluator_state'] for s in outputs if 'val_evaluator_state' in s]
-        val_evaluator_res = self.val_evaluator.evaluation_end(states=val_evaluator_states)
-        val_evaluator_res_df = pd.DataFrame(val_evaluator_res).stack(1).unstack(0)
-        val_evaluator_res_df.dropna(axis=1, how='all', inplace=True)
-        LOGGER.info(f'Validation metrics after epoch #{self.current_epoch}, '
-                    f'total {self.global_step} iterations:\n{val_evaluator_res_df}')
+            # standard validation
+            val_evaluator_states = [s['val_evaluator_state'] for s in outputs if 'val_evaluator_state' in s]
+            val_evaluator_res = self.val_evaluator.evaluation_end(states=val_evaluator_states)
+            val_evaluator_res_df = pd.DataFrame(val_evaluator_res).stack(1).unstack(0)
+            val_evaluator_res_df.dropna(axis=1, how='all', inplace=True)
+            LOGGER.info(f'Validation metrics after epoch #{self.current_epoch}, '
+                        f'total {self.global_step} iterations:\n{val_evaluator_res_df}')
 
-        for k, v in flatten_dict(val_evaluator_res).items():
-            self.log(f'val_{k}', v)
+            for k, v in flatten_dict(val_evaluator_res).items():
+                self.log(f'val_{k}', v)
 
-        # extra validations
-        if self.extra_evaluators:
-            for cur_eval_title, cur_evaluator in self.extra_evaluators.items():
-                cur_state_key = f'extra_val_{cur_eval_title}_evaluator_state'
-                cur_states = [s[cur_state_key] for s in outputs if cur_state_key in s]
-                cur_evaluator_res = cur_evaluator.evaluation_end(states=cur_states)
-                cur_evaluator_res_df = pd.DataFrame(cur_evaluator_res).stack(1).unstack(0)
-                cur_evaluator_res_df.dropna(axis=1, how='all', inplace=True)
-                LOGGER.info(f'Extra val {cur_eval_title} metrics after epoch #{self.current_epoch}, '
-                            f'total {self.global_step} iterations:\n{cur_evaluator_res_df}')
-                for k, v in flatten_dict(cur_evaluator_res).items():
-                    self.log(f'extra_val_{cur_eval_title}_{k}', v)
+            # extra validations
+            if self.extra_evaluators:
+                for cur_eval_title, cur_evaluator in self.extra_evaluators.items():
+                    cur_state_key = f'extra_val_{cur_eval_title}_evaluator_state'
+                    cur_states = [s[cur_state_key] for s in outputs if cur_state_key in s]
+                    cur_evaluator_res = cur_evaluator.evaluation_end(states=cur_states)
+                    cur_evaluator_res_df = pd.DataFrame(cur_evaluator_res).stack(1).unstack(0)
+                    cur_evaluator_res_df.dropna(axis=1, how='all', inplace=True)
+                    LOGGER.info(f'Extra val {cur_eval_title} metrics after epoch #{self.current_epoch}, '
+                                f'total {self.global_step} iterations:\n{cur_evaluator_res_df}')
+                    for k, v in flatten_dict(cur_evaluator_res).items():
+                        self.log(f'extra_val_{cur_eval_title}_{k}', v)
 
     def _do_step(self, batch, batch_idx, mode='train', optimizer_idx=None, extra_val_key=None):
         # pdb.set_trace()
@@ -192,20 +195,22 @@ class BaseInpaintingModule(ptl.LightningModule):
         if mode=='val' or mode=='extra_val':
             batch=self(batch, model='coarse')
             batch=self(batch, model='refine')
-            visiter=self.cfg.util_args.visualize_each_iters_val
-            if batch_idx % visiter ==0:
-                vis_suffix= f'_{mode}'
-                if mode == 'extra_val':
-                    vis_suffix += f'_{extra_val_key}'
-                vis_img=self.visualizer(self.current_epoch, batch_idx, batch, suffix=vis_suffix)
-                if type(vis_img)==tuple:
-                    for name, vim in zip(['Refined', 'Coarse'], vis_img):
-                        self.logger.experiment.add_image(name, vim, dataformats='HWC',global_step=self.global_step)
-                else:
-                    self.logger.experiment.add_image('ImageGrid', vis_img, dataformats='HWC',global_step=self.global_step)
+            if self.cfg.util_args.predict_only==False:
+                visiter=self.cfg.util_args.visualize_each_iters_val
+                if batch_idx % visiter ==0:
+                    vis_suffix= f'_{mode}'
+                    if mode == 'extra_val':
+                        vis_suffix += f'_{extra_val_key}'
+                    vis_img=self.visualizer(self.current_epoch, batch_idx, batch, suffix=vis_suffix)
+                    if type(vis_img)==tuple:
+                        for name, vim in zip(['Refined', 'Coarse'], vis_img):
+                            self.logger.experiment.add_image(name, vim, dataformats='HWC',global_step=self.global_step)
+                    else:
+                        self.logger.experiment.add_image('ImageGrid', vis_img, dataformats='HWC',global_step=self.global_step)
+
         if mode=='val' or mode=='extra_val':
-            if self.cfg.data.val.get('val_save',None)==True:
-                res_folder = './val_results' + os.sep + self.cfg.kind 
+            if self.cfg.data.val.get('val_save',None) is not None:
+                res_folder = self.cfg.data.val.val_save + os.sep + self.cfg.kind 
                 for bf in range(batch['inpainted'].shape[0]):
                     saveRelPath = res_folder + os.sep +batch['pkl_fname'][bf].split(os.sep)[-1]
                     saveRelPath = saveRelPath.replace('.pkl','.png')
@@ -228,10 +233,11 @@ class BaseInpaintingModule(ptl.LightningModule):
         if mode == 'extra_val':
             metrics_prefix += f'{extra_val_key}_'
         result = dict(loss=total_loss, log_info=add_prefix_to_keys(metrics, metrics_prefix))
-        if mode == 'val':
-            result['val_evaluator_state'] = self.val_evaluator.process_batch(batch)
-        elif mode == 'extra_val':
-            result[f'extra_val_{extra_val_key}_evaluator_state'] = self.extra_evaluators[extra_val_key].process_batch(batch)
+        if self.cfg.util_args.predict_only==False:
+            if mode == 'val':
+                result['val_evaluator_state'] = self.val_evaluator.process_batch(batch)
+            elif mode == 'extra_val':
+                result[f'extra_val_{extra_val_key}_evaluator_state'] = self.extra_evaluators[extra_val_key].process_batch(batch)
         return result
 
     def forward(self):

@@ -2,6 +2,7 @@ run_title: Inpainting
 kind: c2f_iter    # def_pix2pixhd_b9_d4, c2f, c2f_iter, c2f_ffc_iter
 
 util_args:
+  eval_mode: False
   predict_only: False
   visualize_each_iters: 50
   visualize_each_iters_val: 50
@@ -63,17 +64,17 @@ evaluator:
   integral_kind: ssim_fid100_f1
 
 tb_dir: ./logs/TB/${kind}/${data.kind}
-save_model_dir: ./saved_models/${kind}/${data.kind}
+save_model_dir: ./logs/saved_models/${kind}/${data.kind}
 model_load: ./saved_models/${kind}/${data.kind}/last.ckpt
 
 trainer:
   kwargs:
     accelerator: gpu
     devices: [0]
-    max_epochs: 2
+    max_epochs: 200
     log_every_n_steps: 10
     num_sanity_val_steps: 0
-    check_val_every_n_epoch: 1
+    check_val_every_n_epoch: 10
     precision: 32
     # val_check_interval: 50000
     # gradient_clip_val: 1

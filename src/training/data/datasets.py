@@ -68,7 +68,7 @@ class InpaintingValDataset(Dataset):
     def __init__(self, datadir, img_suffix='.jpg',pickle_data=False):
         self.datadir = datadir
         if not pickle_data:
-            self.mask_filenames = sorted(list(glob.glob(os.path.join(self.datadir, '**', '*mask*.png'), recursive=True)))
+            self.mask_filenames = sorted(list(glob.glob(os.path.join(self.datadir, '**', '*mask.png'), recursive=True)))
             self.img_filenames = [fname.rsplit('_mask', 1)[0] + img_suffix for fname in self.mask_filenames]
         else:
             self.mask_filenames = sorted(list(glob.glob(os.path.join(self.datadir, '**' , '*.pkl'), recursive=True)))
