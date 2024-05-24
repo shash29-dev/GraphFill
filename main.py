@@ -48,10 +48,11 @@ def main(cfg: OmegaConf) -> None:
         )
         trainer.validate(training_model)
     else:
+        resume_checkpoint = cfg.save_model_dir+'/last.ckpt' if os.path.exists(cfg.save_model_dir+'/last.ckpt') else None
         trainer = Trainer(
             callbacks=ModelCheckpoint(dirpath=cfg.save_model_dir, **cfg.trainer.checkpoint_kwargs),
             logger= metrics_logger,
-            resume_from_checkpoint=cfg.save_model_dir+'/last.ckpt',  
+            resume_from_checkpoint=resume_checkpoint,  
             **trainer_kwargs
         )
         trainer.fit(training_model)
